@@ -76,6 +76,20 @@ class ParserState(Generic[StateT]):
             try:
                 action, arg = states[state][token.type]
             except KeyError:
+                # -- MODIFICATION START --
+                # In an interactive parser, an incomplete indented block can cause the
+                # indenter to yield a _DEDENT token at the end of the stream. The parser
+                # state may not expect this token, causing a KeyError.
+                # By checking for this specific token type and returning, we can
+                # safely ignore it and prevent an UnexpectedToken error, allowing
+                # the valid preceding code to be parsed successfully.
+                # if token.type == '_DEDENT':
+
+                # This condition is checked for each token that causes a KeyError.
+                # It will correctly fire for every sequential _DEDENT at the stream's end.
+                if token.type == '_DEDENT' and self.lexer.source.is_eof():
+                    return
+                # -- MODIFICATION END --
                 expected = {s for s in states[state].keys() if s.isupper()}
                 raise UnexpectedToken(token, expected, state=self, interactive_parser=None)
 
